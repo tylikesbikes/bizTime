@@ -32,7 +32,8 @@ router.get('/:code', async (req, res, next) => {
 
 router.post('', async (req, res, next) => {
     try {
-        let {code, name, description} = req.body;
+        let {name, description} = req.body;
+        let code = slugifyCompanyName(name);
         const addQuery = await db.query(`INSERT INTO companies (code, name, description) VALUES ($1, $2, $3)`, [code, name, description]);
         return res.status(201).send({company: {code, name, description}})
     } catch(e) {

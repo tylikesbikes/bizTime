@@ -51,20 +51,54 @@ router.post('', async (req, res, next) => {
     }
 })
 
+// router.put('/:invoiceId', async (req, res, next) => {
+//     try {
+//         let {invoiceId} = req.params;
+//         let {amt:amount, paid:isPaid} = req.body;
+//         const invoicesQuery = await db.query(`
+//             SELECT * from invoices WHERE id = $1 RETURNING `, [invoiceId]);
+        
+//         if (invoicesQuery.rows.length === 0) {
+//             throw new ExpressError(`Invoice id ${invoiceId} not found`, 404)
+//         }
+//         const updateInvoice = await db.query(`UPDATE invoices SET amt = $1 WHERE id = $2
+//             RETURNING id, comp_code, amt, paid, add_date, paid_date`, [amount, invoiceId]);
+//         const {id, comp_code, amt, paid, add_date, paid_date} = updateInvoice.rows[0];
+//         return res.send({invoice:{id, comp_code, amt, paid, add_date, paid_date}})
+//     } catch(e) {
+//         return next(e);
+//     }
+// })
+
 router.put('/:invoiceId', async (req, res, next) => {
     try {
         let {invoiceId} = req.params;
-        let {amt:amount} = req.body;
-        const invoicesQuery = await db.query(`
-            SELECT * from invoices WHERE id = $1`, [invoiceId]);
+        let {amt, paid} = req.body;
+
+        const invoiceBefore = await db.query(`SELECT * FROM invoices WHERE id = $1`, [invoiceId]);
+        if (invoiceBefore.rows.length === 0) {
+            throw new ExpressError(`Unable to find invoice ${invoiceId}`, 404);
+        } 
+
+        let currentPaidStatus = invoiceBefore.rows[0].paid;
+        let paid_date;
+        let updateQuery;
         
-        if (invoicesQuery.rows.length === 0) {
-            throw new ExpressError(`Invoice id ${invoiceId} not found`, 404)
+        if (paid && !currentPaidStatus) {
+            updateQuery = await db.query(`UPDATE invoices SET amt = $1, paid = TRUE, paid_date = CURRENT_DATE where id = $2 
+            RETURNING id, comp_code, amt, paid, add_date, paid_date`,[amt, invoiceId])
+        } else if (!paid && currentPaidStatus) {
+            updateQuery = await db.query(`UPDATE invoices SET amt = $1, paid = FALSE, paid_date = NULL where id = $2 
+            RETURNING id, comp_code, amt, paid, add_date, paid_date`, [amt, invoiceId])
+        } else {
+            updateQuery = await db.query(`UPDATE invoices SET amt = $1 where id = $2 
+            RETURNING id, comp_code, amt, paid, add_date, paid_date`, [amt, invoiceId])
         }
-        const updateInvoice = await db.query(`UPDATE invoices SET amt = $1 WHERE id = $2
-            RETURNING id, comp_code, amt, paid, add_date, paid_date`, [amount, invoiceId]);
-        const {id, comp_code, amt, paid, add_date, paid_date} = updateInvoice.rows[0];
-        return res.send({invoice:{id, comp_code, amt, paid, add_date, paid_date}})
+
+        return res.send({invoice:updateQuery.rows})
+
+
+
     } catch(e) {
         return next(e);
     }
@@ -80,7 +114,6 @@ router.delete('/:invoiceId', async (req, res, next) => {
         }
 
         const deleteInvoice = await db.query(`DELETE FROM invoices WHERE id = $1`, [invoiceId])
-        
         return res.send({status:"deleted"})
     } catch(e) {
         return next(e);
