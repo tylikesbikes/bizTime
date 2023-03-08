@@ -2,11 +2,17 @@
 
 
 const express = require("express");
+const db = require('./db')
 
 const app = express();
 const ExpressError = require("./expressError")
+const companiesRoutes = require('./routes/companies');
 
 app.use(express.json());
+app.use('/companies', companiesRoutes);
+
+
+
 
 
 /** 404 handler */
@@ -27,5 +33,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-
+app.listen(3000, function() {
+  console.log('Listening on port 3000');
+})
 module.exports = app;
