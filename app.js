@@ -7,9 +7,11 @@ const db = require('./db')
 const app = express();
 const ExpressError = require("./expressError")
 const companiesRoutes = require('./routes/companies');
+const invoiceRoutes = require('./routes/invoices');
 
 app.use(express.json());
 app.use('/companies', companiesRoutes);
+app.use('/invoices', invoiceRoutes);
 
 
 
@@ -27,13 +29,10 @@ app.use(function(req, res, next) {
 app.use((err, req, res, next) => {
   res.status(err.status || 500);
 
-  return res.json({
+  return res.send({
     error: err,
     message: err.message
   });
 });
 
-app.listen(3000, function() {
-  console.log('Listening on port 3000');
-})
 module.exports = app;
